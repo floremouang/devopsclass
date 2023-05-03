@@ -1,0 +1,531 @@
+**************************************************
+FUNDAMENTAL SKILLS ON HOW TO HOST A WEBSITE ON AWS
+**************************************************
+===PROBLEM===
+- Assuming developers in your company are done writing all the codes and files of an html static website. 
+- All the files have been stored in a GitHub repositoty and you have been given a script to download this website.
+- As a DevOps engineer, you are responsible for deploying this website on AWS.
+- The company requires high availability and fault tolerance
+
+====================================
+STEP 1: BUILD 3 TIER AWS NETWORK VPC
+====================================
+1. Create 01 VPC: car-rental-vpc
+region: 	us-east-1
+VPC: 	car-rental-vpc
+CIDR:	10.0.0.0/16
+
+2. Create Internet Gateway: car-rental-internet-gateway
+3. Attach the Internet Gateway car-rental-internet-gateway to the VPC car-rental-vpc
+VPC: 	car-rental-vpc
+4. Create 02 public Subnets: car-rental-public-subnet-az1 and car-rental-public-subnet-az2
+Public Subnets:	(1st Tier)
+	car-rental-public-subnet-az1
+		Availability zone:	us-east-1a
+		CIDR:		10.0.0.0/24
+	car-rental-public-subnet-az2
+		Availability zone:	us-east-1b
+		CIDR:		10.0.1.0/24
+5. Create 01 Public Route Table: car-rental-public-route-table
+VPC: 	car-rental-vpc
+6. Add Public Route to the Public Route Table car-rental-public-route-table
+
+7. Associate the Public Subnets: car-rental-public-subnet-az1 and car-rental-public-subnet-az2
+ with the Public Route Table car-rental-public-route-table
+
+8. Create the Private Subnets:
+Private App Subnets: (2nd Tier)
+	car-rental-private-app-subnet-az1
+		Availability zone:	us-east-1a
+		CIDR:		10.0.2.0/24
+	car-rental-private-app-subnet-az2
+		Availability zone:	us-east-1b
+		CIDR:		10.0.3.0/24
+
+Private Data Subnets: (3nd Tier)
+	car-rental-private-data-subnet-az1
+		Availability zone:	us-east-1a
+		CIDR:		10.0.4.0/24
+	car-rental-private-data-subnet-az2
+		Availability zone:	us-east-1b
+		CIDR:		10.0.5.0/24
+
+===========================
+STEP 2: CREATE NAT GATEWAYS
+===========================
+/**
+* The Nat Gateway allows the instances in the private App
+* subnets and private Data subnets to access the internet.
+* The Private Route Table is associated with the private subnets
+* and routes traffic to the internet through the nat gateway.
+**/
+
+1. Create NAT Gateway: car-rental-nat-gateway-az1
+VPC: 		car-rental-vpc
+Public Subnets:	car-rental-public-subnet-az1
+Allocate Elastic IP(Click)
+	
+2. Create route table: car-rental-private-route-table-az1 
+VPC: 		car-rental-vpc
+3. Add a public route to car-rental-private-route-table-az1
+4. Associate the car-rental-private-app-subnet-az1 and car-rental-private-data-subnet-az1
+with the car-rental-private-route-table-az1
+5. Create NAT Gateway: car-rental-nat-gateway-az2
+VPC: 		car-rental-vpc
+Public Subnets:	car-rental-public-subnet-az2
+
+6. Create route table: car-rental-private-route-table-az2 
+VPC: 		car-rental-vpc
+7. Add a public route to car-rental-private-route-table-az2
+8. Associate the car-rental-private-app-subnet-az2 and car-rental-private-data-subnet-az2
+with the car-rental-private-route-table-az2
+
+=============================
+STEP 3: CREATE SECURITY GROUPS
+=============================
+1. Create a security group for the application loadbalancer: car-rental-alb-security-group
+/**
+* Open port 80 (HTTP) for any source on the internet (Source = 0.0.0.0/0)
+* Open port 443 (HTTPS) for any source on the internet (Source = 0.0.0.0/0)
+**/
+2. Create a security group to SSH in your resources: car-rental-ssh-security-group
+/**
+* Open port 22 (SSH) for your IP address (Source = Your IP Address)
+* 
+**/
+3. Create a security group for the Webserver: car-rental-webserver-security-group
+/**
+* Open port 80 (HTTP) for any source on the internet through the application loadbalancer (Source = car-rental-alb-security-group)
+* Open port 443 (HTTPS) for any source on the internet through the application loadbalancer (Source = car-rental-alb-security-group)
+* Open port 22 (SSH) for your IP address (Source = car-rental-ssh-security-group)
+**/
+4. Create Database Security group: car-rental-database-security-group
+/**
+* Open port 3306 (MySQL/aurora) for the webserver security group (Source = car-rental-webserver-security-group)
+**/
+5. Create a security group for the EFS: car-rental-efs-security-group
+/**
+* Open port 22 (SSH) for your IP address (Source = car-rental-ssh-security-group)
+* Open port 2049 (NFS) for any source on the internet (Source = car-rental-webserver-security-group)
+* Open port 2049 (NFS) for any source on the internet (Source = car-rental-efs-security-group)
+**/
+
+=============================
+STEP 4: CREATE THE RDS INSTANCE
+=============================
+
+RDS
+1. Create a Subnet group
+RDS > Subnet groups > Create DB subnet group
+	Name:			car-rental-db-subnet
+	Description:		Car Rental Database Subnet
+	VPC:			car-rental-vpc
+	Availability Zones:		us-east-1a
+				us-east-1b
+	Subnets:		
+				car-rental-private-data-subnet-az1
+				car-rental-private-data-subnet-az2	
+
+Create
+
+2. Create the Database
+RDS > Databases > Create database
+	Standard create
+	MySQL
+	Engine Version:			MySQL 5.7.40
+	Templates			Dev/Test
+	DB instance identifier		car-rental-rds-db
+	Master username			yourname
+	Master password			yourpassword
+	confirm Master password		yourpassword
+	Burstable classes	
+	Include previous generation classes
+	car-rental-vpc
+	car-rental-db-subnet
+	car-rental-database-security-group
+	Availability Zone		us-east-1b
+	Additional configuration
+		Initial database name	carrentaldb
+	Create database
+- Wait until the DB is active
+
+=======================================
+STEP 5: CREATE THE ELASTIC FILE SYSTEM (EFS)
+=======================================
+1. Create a file system on your aws console: car-rental-efs
+/**
+* The Elastic File System will allow the Webservers in the Private App Subnet
+* To pull the application code and the configuration files
+* From the same location
+**/
+EFS > Create file system > Customize
+	car-rental-efs
+	Enable encryption of data at rest(uncheck)
+	Tags:	Name	car-rental-efs
+	Next
+	car-rental-vpc
+	us-east-1a	car-rental-private-data-subnet-az1		car-rental-efs-security-group
+	us-east-1b	car-rental-private-data-subnet-az2		car-rental-efs-security-group
+	Next
+	Next
+	Create
+
+# If you want to find the information to mount the file system
+File system ID(click) > Attach(click)
+- Using the EFS mount helper:
+sudo mount -t efs -o tls fs-0a2d97d4952022660:/ efs
+
+- Using the NFS client:
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-0d49916518c26aa91.efs.us-east-1.amazonaws.com:/ efs
+
+==================================================
+STEP 6: LAUNCH A SETUP SERVER AND INSTALL WORDPRESS
+==================================================
+1. Launch the Setup Server: car-rental-setup-server
+	Network settings:	Edit
+		VPC:		car-rental-vpc
+		Subnet:		car-rental-public-subnet-az1
+		Select existing security group
+			car-rental-ssh-security-group
+			car-rental-alb-security-group
+			car-rental-webserver-security-group
+
+2. SSH into Setup Server
+3. Install WordPress
+	Use the file:	Install-WordPress-Notepad
+
+======================================
+STEP 7: CREATE THE LOAD BALANCER SERVICE
+======================================
+0- Bash script
+#!/bin/bash
+yum update -y
+sudo yum install -y httpd httpd-tools mod_ssl
+sudo systemctl enable httpd 
+sudo systemctl start httpd
+sudo amazon-linux-extras enable php7.4
+sudo yum clean metadata
+sudo yum install php php-common php-pear -y
+sudo yum install php-{cgi,curl,mbstring,gd,mysqlnd,gettext,json,xml,fpm,intl,zip} -y
+sudo rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+sudo yum install mysql-community-server -y
+sudo systemctl enable mysqld
+sudo systemctl start mysqld
+echo "fs-0d49916518c26aa91.efs.us-east-1.amazonaws.com:/ /var/www/html nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
+mount -a
+chown apache:apache -R /var/www/html
+sudo service httpd restart
+
+1 - Create 2 EC2 instances on each of the Private App Subnet
+car-rental-webserver-az1 in Private the Subnet car-rental-private-app-subnet-az1
+   Security Group:	Webserver Security Group
+   User data:
+   (Paste the bash script)
+car-rental-webserver-az2 in Private the Subnet car-rental-private-app-subnet-az2
+   Security Group:	Webserver Security Group
+   User data:
+   (Paste the bash script)
+2 - Create target group car-rental-TG
+EC2 > Target groups >
+	Create target group
+		name:	car-rental-TG
+		VPC:	car-rental-vpc
+		Advanced health check settings:
+			Success codes:		200,301,302
+		Next
+		car-rental-webserver-az1
+		car-rental-webserver-az2
+		Include as pending below(click)
+		create target group
+	refresh
+3 - Create the ALB "car-rental-alb" to route traffic in those EC2s instances
+EC2 > Load balancers > Create load balancer > Select load balancer type
+	Application Load Balancer > Create
+	car-rental-alb
+	car-rental-vpc
+	us-east-1a	car-rental-public-az1
+	us-east-1b	car-rental-public-az2
+	ALB Security Group
+	Listener HTTP:80
+		Protocol:		HTTP
+		Port:			80
+		Default action:		Forward to:	car-rental-TG
+	create load balancer
+	view load balancer
+***wait for the State to change from Provisioning to Active***
+- copy the DNS name of the load balancer
+- Open a new web browser tab and paste it
+http://car-rental-alb-353717752.us-east-1.elb.amazonaws.com/
+
+4 - Change the WordPress Address (URL)
+- Change the WordPress Address (URL)
+http://car-rental-alb-353717752.us-east-1.elb.amazonaws.com/wp-admin
+	yourname
+	yourpassword
+Settings > General
+	WordPress Address (URL):
+		http://car-rental-alb-353717752.us-east-1.elb.amazonaws.com
+	Site Address (URL):
+		http://car-rental-alb-353717752.us-east-1.elb.amazonaws.com
+Save Changes
+	yourname
+	yourpassword
+
+5 - Terminate the Setup Server
+
+=============================================
+STEP 8: REGISTER A NEW DOMAIN NAME IN ROUTE 53
+=============================================
+1. Route 53 
+2. Register domain
+	Type you domain to check if it is available: yourdomain
+3. select available domain the hit continue
+4. Contact Details
+	Enable Privacy Protection
+5. Verify & Purchase
+	terms and conditions
+	complete order
+6. Registered domains and verify your domain is there.
+
+====================================
+STEP 9: CREATE A RECORD SET IN ROUTE 53
+====================================
+1. We are using Route 53 to register our Domain name and create a record set.
+Route 53 > Hosted zones > yourdomain > Create record
+	Record name:		www
+	Alias			toggle on
+	Choose endpoint:	Alias to Application and Classic Load Balancer
+	Choose Region:		yourregion
+	Choose load balancer:	jupiter-alb
+	Create Record
+2. To access our website using the domain name
+- select record
+- copy record name
+- open a new web browser tab and paste
+
+=================================================================
+STEP 10: REGISTER FOR A FREE SSL CERTIFICATE IN AWS CERTIFICATE MANAGER
+=================================================================
+1. We will register for a free SSL certificate from AWS Certificate Manager
+AWS Certificate Manager > Certificates > Request certificate > Request public certificate
+	Fully qualified domain name:		yourdomain
+	Add another name to this certificate:	*.yourdomain
+	DNS validation - recommended
+	Request
+View Certificate
+Create records in Route 53
+	yourdomain
+	*.yourdomain
+	Create records
+- Refresh the web browser to validate the status
+2. We will use the SSL certificate to encrypt all communications between
+	our webserver and the web browser
+
+===================================================
+STEP 11: SETTING UP A BASTION AND SSH INTO WEBSERVERS
+===================================================
+1 - Launch Bastion Host
+   Name:			car-rental-bastion-host
+   AMI:			Amazon Linux 2 AMI
+   type:			t2.micro
+   Key pair:		putty_key
+   VPC:			car-rental-vpc
+   Subnet:			car-rental-public-subnet-az1
+   Security Group:		car-rental-ssh-security-group
+Launch instance
+
+2 - SSH into an instance in the Private Subnet using Bastion Host
+#- Download Pageant for the windows version we are using
+https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
+#- Add myec2key to Pageant
+Pageant > Add Key > putty_key(browse and select putty_key) > close
+
+#- SSH into Bastion Host using putty
+ec2-user@<Public_IP_Bastion_host>
+SSH > Auth > Allow agent forwarding > open
+
+#- SSH into the instance in the private subnet
+ssh ec2-user@<Private_IP_car-rental-webserver-az1>
+or 
+ssh ec2-user@<Private_IP_car-rental-webserver-az2>
+
+==================================================================
+STEP 12: CREATE AN HTTPS (SSL) LISTENER FOR AN APPLICATION LOAD BALANCER
+==================================================================
+1. We will use the SSL certificate to encrypt all communications between
+	our webserver and the web browser
+
+EC2 > Load Balancers > car-rental-alb > Actions > Add listener
+	Protocol:			HTTPS
+	Default actions:		Forward
+	Target group:		car-rental-TG
+	Default SSL certificate:	From ACM
+				yourdomain
+	Add
+2. For HTTP Listener Change default actions to redirect traffic to HTTPS
+HTTP:80 > Actions > Edit Listener
+	Default actions:		Redirect
+	Protocol:			HTTPS
+	Port:			443
+	Save Changes
+
+3. SSH into one of the Webserver in the private App Subnet
+ssh ec2-user@<Private_IP_Webserver AZ1>
+or 
+ssh ec2-user@<Private_IP_Webserver AZ2>
+
+sudo su -
+nano /var/www/html/wp-config.php
+>>>>look for: 
+		* @package WordPress
+		*/
+>>>>Right after, press Enter Enter UP, and Paste the code
+
+/* SSL Settings */
+define('FORCE_SSL_ADMIN', true);
+
+// Get true SSL status from AWS load balancer
+if(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+  $_SERVER['HTTPS'] = '1';
+}
+
+>>>>Ctrl+x y Enter
+
+4. Verify on the web browser
+https://www.yourdomain
+- Open a new web browser tab and paste it
+https://www.yourdomain/
+- Change the WordPress Address (URL)
+https://www.yourdomain/wp-admin
+	yourname
+	yourpassword
+Settings > General
+	WordPress Address (URL):
+		https://www.yourdomain
+	Site Address (URL):
+		https://www.yourdomain
+Save Changes
+	yourname
+	yourpassword
+
+===================================
+STEP 13: CREATE AN AUTO SCALING GROUP
+===================================
+/**
+* We will use Auto Scaling Group to dynamically create our webservers
+* to make our website highly available, scalable, fault-tolerant, and elastic.
+**/
+
+1. Terminate all webservers: car-rental-webserver-az1 and car-rental-webserver-az2
+2. Create a launch template
+/**
+* A launch template contain the configurations of our EC2 instance
+* That the auto scaling group will use to launch new EC2 instances
+* In the private APP subnet
+**/
+EC2 instances > Launch Templates > Create launch template
+	name:		car-rental-launch-template
+	description: 	Launch template for Auto Scaling Group
+	Provide guidance to help me set up a template that I can use with EC2 auto Scaling
+	Amazon Linux
+	Amazon Linux 2 AMI
+	64-bit (x86)
+	t2.micro
+	putty_key
+	car-rental-webserver-security-group
+	 User data:
+   		(Paste the bash script)
+create launch template
+view launch template
+
+3. Create auto Scaling group
+EC2 > Auto Scaling Group > Create Auto Scaling group
+	name:			car-rental-auto-scaling-group
+	Launch template:		car-rental-launch-template
+	Next
+	car-rental-vpc
+	car-rental-private-app-subnet-az1
+	car-rental-private-app-subnet-az2	
+	Next
+	Attach to an existing load balancer
+	Choose from your load balancer target groups
+	car-rental-TG
+	ELB
+	Enable group metrics collection within CloudWatch
+	Next
+	Group size
+		Desired capacity:	2
+		Minimum capacity:	1
+		Maximum capacity:	4
+	Next
+	Add notification
+	SNS Topic: Create Topic
+	Next
+	Add tags
+		key:	Name
+		Value:	car-rental-asg-webserver
+	Next
+	Create Auto Scaling group
+4. verify that 02 ec2 instances are up and running
+5. Check the health status of your target group to be healthy.
+/**
+* If the "Health Status" of the instances is "unhealthy", wait for about 3 - 5minutes
+* to allow all the commands in the "user data" to run and install the software.
+**/
+6. verify that your website is available on the internet
+
+=============================================
+STEP 14: INSTALL WORDPRESS THEME AND TEMPLATE
+=============================================	
+
+https://www.yourdomain/wp-admin
+yourname
+yourpassword
+Appearance > Theme > Add New > Astra > Install
+Activate
+Get Started
+Build Your Website Now > Elementor
+Select your template
+Local Business > Car Garage
+Skip & Continue > Continue
+first name
+email
+build my website
+view website
+logout
+================
+STEP 15: CLEANUP
+================
+
+1. Delete Auto Scaling group
+2. Delete Launch Template
+3. Delete Application load balancer
+4. Delete the target group
+5. Delete webservers
+6. Delete RDS database
+7. Security Groups
+8. Delete the NAT Gateway
+9. Delete VPC
+10. Delete the elastic IP
+11. Delete Record set (delete the A record)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
