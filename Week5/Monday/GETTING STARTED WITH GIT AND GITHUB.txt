@@ -1,0 +1,227 @@
+GIT AND GITHUB ON WINDOWS
+*******************************
+
+INSTALLING GIT ON WINDOWS
+=========================
+1. Download the latest version here:
+https://gitforwindows.org/
+
+2. Follow installer instructions
+3. Open command prompt and verify that git is install
+git version
+
+CONFIGURING GIT GLOBALLY
+========================
+1. Configure your username and email
+git config --global user.name "github-username"
+git config --global user.email "github-email"
+
+2. Verify your configuration on the CLI
+git config -l
+
+3. Verify on your UI
+C:\Users\yourname\.gitconfig
+
+GETTING STARTED WITH GIT LOCALLY
+===============================
+1. Create a folder to save all your GIT projects
+C:\Users\yourname\DevOps\Git
+
+2. Create your first local git repository to store your Bootcamp Notes:
+C:\Users\yourname\DevOps\Git\devopsclass
+
+3. Open git bash in the devopsclass forlder
+4. Initialize devopsclass as a new git local repository
+git init .
+
+5. Create a read me text file  in the devopsclass folder: README.TXT
+6. Add the content belloow:
+This repository will record all the notes for my DevOps Bootcamp.
+In The main branch:
+- The Orientation folder contains all the files shared during The orientation session
+- For each week they will be a separate forlder with a week number
+- Each week number will contain 03 separates folders coresponding to each week day of the class
+- Each weekday of the class will contain all the files shared for that specific class
+
+The Dev branch:
+- Contains all Projects  that are on-going
+
+The QA branch:
+- Contains all Projects  that are more than 50% completed
+
+The UAT branch:
+- Contains all completed Projects  that needs final validation
+
+The PROD branch:
+- Contains all completed Projects  that have been validated
+
+7. Stage the file so the file can become trackeable
+git add .
+git status
+
+8. Add the file to the local repository
+git commit -m "Added read me file"
+
+
+GETTING STARTED WITH GITHUB (REMOTE REPO)
+==========================================
+>>>>>>>>>>>>>>>>On your Windows computer<<<<<<<<<<<<<<<
+1. Open your command prompt and generate ssh key pair
+ssh-keygen
+
+2. Navigate to your .ssh folder, open the public key in notepad and copy the content
+C:\Users\yourname\.ssh\id_rsa.pub
+
+>>>>>>>>>>>>>>>>On your GitHub account<<<<<<<<<<<<<<<
+3. Create a github account and sign in
+https://github.com > Sign in
+email
+password
+username
+
+4. Add SSH key to remote server
+Account settings > SSH and GPG keys > Add new
+note	"My local Windows"
+paste the key
+Add key
+
+5.  Create a github private repository devopsclass
+your-username > Your repositories > New
+Repository name:		devopsclass
+Private
+Create repository
+
+6. Copy the repository url of devopsclass for ssh
+git@github.com:your-github-username/devopsclass.git
+
+
+>>>>>>>>>>>>>>>>On your Windows computer<<<<<<<<<<<<<<<
+7. Open git bash in your devopsclass folder
+
+8. Set remote repository for devopsclass
+git remote add origin git@github.com:your-github-username/devopsclass.git
+git branch -M main
+
+9. Push changes to remote repository
+git push -u origin main
+
+
+ORGANIZING DEVOPSCLASS USING VS CODE
+====================================
+1. Open devopsclass using VS Code
+
+2. Follow the configuartion bellow to update this repository and push to github.
+devopclass
+	main
+		Orientation
+		Week1
+			Monday
+			Wednesday
+			Saturday
+		Week2
+			Monday
+			Wednesday
+			Saturday
+		Week3
+			Monday
+			Wednesday
+			Saturday
+		Week4
+			Monday
+			Wednesday
+			Saturday
+		Week5
+			Monday
+			Wednesday
+			Saturday
+	Dev
+
+	QA
+
+	UAT
+
+	release
+
+	PROD
+
+
+
+WORKING WITH BRANCHES
+===========================
+1 - create developer branch and verify branches existing
+git branch
+git branch Dev
+git branch
+ 
+2 - switch to developer branch and validate your work
+git checkout Dev
+git branch
+ls
+
+3 - switch to main branch
+git checkout main
+git branch
+ls
+
+4 - create QA branch
+git branch QA
+git branch
+
+
+WORKING WITH TAGs
+======================
+Step-1
+Checkout the branch where you want to create the tag:
+git checkout <branch name>
+
+Step-2
+Create tag with some name:
+git tag <tag name>
+git tag v1.0
+
+You can also create anotated tag:
+git tag -a <tag name> -m "<anotation of the tag>"
+git tag -a v1.1 -m "tag for release version 1.1"
+
+Step -3
+Display or Show tags:
+git tag
+git show v1.0
+git tag -l "v1.*"
+
+Step-4
+Push tags to remote:
+git push origin <tag name>
+git push origin v1.0
+
+You can push all the tags at ones to your remote repository:
+git push origin --tags
+
+
+Step-5
+Delete tags (if required only)
+- to delete tags from local:
+git tag -d <tag name>
+git tag -d <tag name> <tag name>
+or
+git tag --delete <tag name>
+git tag -d v1.0
+
+- to delete tags from remote:
+git push origin -d <tag name>
+git push origin -d <tag name> <tag name>
+git push origin --delete <tag name>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

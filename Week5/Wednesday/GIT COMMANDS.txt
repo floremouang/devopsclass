@@ -1,0 +1,101 @@
+GIT COMMANDS
+===============
+git init . 
+git add .
+git commit -m "Commit information" 
+git status 
+git log 
+git remote add "remote_repo"	 // add remote repo to local system 
+git clone <remote_repo> 		// clone repo into local system 
+git pull origin master 
+git push origin master 
+git checkout -- 
+git checkout -- . 
+git restore <file_name> 
+git restore . 
+git checkout <branch_name> 
+git checkout <commit_id> file 	// to get a file from previous commit
+git annotate 
+git branch --set-upstream-to=origin/master master 
+git reset HEAD
+
+
+What is branch in GIT HUB?
+------------------------------------
+
+When we create GIT Repository by default it will provide main branch.
+-> Branches are nothing but code bases
+-> We can create several branches in Git repository
+Generally in git repository we will create branches like bellow:
+	- main (default)
+	- Dev
+	- Feature
+	- QA
+	- UAT
+	- release
+	- PROD 
+
+Dev Teams:
+	- On-Going Dev Team 	------> Dev
+	- Bug Fixing Dev Team	------> QA
+	- Prod Support Dev Team	------> release
+
+
+Working with Tags
+-------------------------
+1. What are tags / releases
+Tagging in Git or any other VCS refers to creating specific points in the history for your repository.
+This is usually done to mark release points. (v 1.0, v 1.1, ....)
+
+2. Why should i create TAGs
+- To Mark release points for your code
+- To create historic restore points
+
+3. When to create TAGs
+- When you want to create a release point for a stable version of your code
+- When you want to create a historic point for your code 
+that you can refer at any furture time.
+
+4. How to create TAGs in git
+	create | show | publish | delete
+Step-1
+Checkout the branch where you want to create the tag:
+git checkout <branch name>
+
+Step-2
+Create tag with some name:
+git tag <tag name>
+git tag v1.0
+
+You can also create anotated tag:
+git tag -a <tag name> -m "<anotation of the tag>"
+git tag -a v1.1 -m "tag for release version 1.1"
+
+Step -3
+Display or Show tags:
+git tag
+git show v1.0
+git tag -l "v1.*"
+
+Step-4
+Push tags to remote:
+git push origin <tag name>
+git push origin v1.0
+
+You can push all the tags at ones to your remote repository:
+git push origin --tags
+
+
+Step-5
+Delete tags (if required only)
+- to delete tags from local:
+git tag -d <tag name>
+git tag -d <tag name> <tag name>
+or
+git tag --delete <tag name>
+git tag -d v1.0
+
+- to delete tags from remote:
+git push origin -d <tag name>
+git push origin -d <tag name> <tag name>
+git push origin --delete <tag name>
