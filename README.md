@@ -1,1 +1,1 @@
-This repo is for my devops class notes
+This branch contain all the projects that are on going
