@@ -1,1 +1,3 @@
-This repo is for my devops class notes
+The UAT branch:
+- Contains all completed Projects  that needs final validation
+
