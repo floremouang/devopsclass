@@ -1,1 +1,3 @@
-This repo is for my devops class notes
+The QA branch:
+- Contains all Projects  that are more than 50% completed
+
